@@ -1,0 +1,8 @@
+{
+    "intermediate-solutions": false,
+    "parallel": 8,
+    "solver": "cp-sat@9.12.4544",
+    "time-limit": 60000,
+    "soln-sep": "",
+    "search-complete-msg": ""
+}
