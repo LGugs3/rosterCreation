@@ -1,54 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'minizincExec.dart';
 
 void main() {
   runApp(const MyApp());
-}
-
-void tryRunMinizinc() async {
-  try{
-    runMinizinc();
-  } on FileSystemException catch(e){
-    print(e.message);
-  }
-}
-
-void runMinizinc() async {
-  late String mzFile;
-  if (Platform.isWindows){
-    mzFile = "minizincDistros/windows/minizinc";
-  } else if (Platform.isMacOS){
-    mzFile = "minizincDistros/macos/Contents/Resources/minizinc"; //TODO:: change to update actual path
-  } else{
-    throw PlatformException(code: "UNSUPPORTED_PLATFORM", message: "Unsupported platform: ${Platform.operatingSystem}");
-  }
-
-  ProcessResult counterProc = await Process.run(mzFile, ["minizinc/config.mpc", "minizinc/schedule.mzn", "-d", "./minizinc/counter.dzn"]);
-  ProcessResult driverProc = await Process.run(mzFile, ["minizinc/config.mpc", "minizinc/schedule.mzn", "-d", "./minizinc/driver.dzn"]);
-
-  File outFile = File("minizinc/output.csv");
-  File bugFile = File("minizinc/debug.txt");
-
-  if (await bugFile.exists()) {
-    await bugFile.delete();
-  }
-  if (await outFile.exists()) {
-    await outFile.delete();
-  }
-
-
-  IOSink outSink = outFile.openWrite();
-  IOSink errSink = bugFile.openWrite();
-  outSink.writeAll([counterProc.stdout, "\n", driverProc.stdout]);
-  errSink.writeAll([counterProc.stderr, "\n", driverProc.stderr]);
-
-  //flush and close sinks
-  await outSink.flush();
-  await outSink.close();
-
-  await errSink.flush();
-  await errSink.close();
 }
 
 class MyApp extends StatelessWidget {
@@ -58,11 +12,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Minizinc Roster',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Minizinc Roster Home Page'),
     );
   }
 }
@@ -77,27 +31,34 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
 
-  void _incrementCounter() {
+  FutureBuilder<List<List<dynamic>>> _mzTable = buildMZOutput();
+
+  Future<void> _refreshTable() async {
+    await tryRunMinizinc();
+
     setState(() {
-      _counter++;
+      _mzTable = buildMZOutput();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: tryRunMinizinc,
-          child: const Text("Run Minizinc"),
-        ),
-      ),
+      appBar: AppBar(title: const Text("Minizinc data")),
+      body: Column(
+        children: [
+          Center(
+          child: ElevatedButton(
+            onPressed: _refreshTable,
+              child: const Text("Run Minizinc"),
+            ),
+          ),
+          Expanded(
+            child: _mzTable,
+          ),
+        ],
+      )
     );
   }
 }
