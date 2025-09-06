@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'minizincExec.dart';
+import 'package:schedule_creator/showSchedule.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Minizinc Roster Home Page'),
+      home: MyHomePage(title: 'Minizinc Roster Home Page'),
     );
   }
 }
@@ -32,14 +33,18 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
 
-  FutureBuilder<List<List<dynamic>>> _mzTable = buildMZOutput();
-
-  Future<void> _refreshTable() async {
-    await tryRunMinizinc();
-
-    setState(() {
-      _mzTable = buildMZOutput();
-    });
+  void _navToVisual() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => ShowSchedule(),
+      )
+    );
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => ShowSchedule(),
+    //   )
+    // );
   }
 
   @override
@@ -50,12 +55,9 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           Center(
           child: ElevatedButton(
-            onPressed: _refreshTable,
+            onPressed: _navToVisual,
               child: const Text("Run Minizinc"),
             ),
-          ),
-          Expanded(
-            child: _mzTable,
           ),
         ],
       )

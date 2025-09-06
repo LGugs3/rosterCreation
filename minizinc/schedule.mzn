@@ -30,20 +30,20 @@ constraint forall(d in DAYS)(
 );
 
 % at most `max_shift_workers` work every shift
-constraint forall(d in DAYS) (
-    schedule `has_maximum_shift_workers` d
-);
+% constraint forall(d in DAYS) (
+%    schedule `has_maximum_shift_workers` d
+% );
 
 % restrict schedule to availability
 constraint forall(e in EMPLOYEES, d in DAYS)(
     avail_allows_shifts_for(schedule[e, d], availability, e, d)
 );
 
-
-%solve to maximize the number of average shifts per employee
+% solve to minimize the difference between shifts given and max_shifts
+solve minimize abs(sum([emp_max_shifts[e].max_shifts - sum([card(schedule[e, d]) | d in DAYS]) | e in EMPLOYEES]));
 
 % allows full days
-solve maximize average_shifts_per_employee(schedule);
+% solve maximize average_shifts_per_employee(schedule);
 
 % spreads out shifts more, less full-days
 %solve maximize sum([1 | d in DAYS, e in EMPLOYEES where schedule[e, d] != {}]) div card(EMPLOYEES);

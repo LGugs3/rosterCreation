@@ -3,11 +3,11 @@ enum DAYS = {MON, TUES, WED, THURS, FRI, SAT, SUN};
 enum SHIFT = {MORN, EVEN};
 
 
-par int: num_shifts = 2; % number of shifts in a day
-par int: min_workers = 2 * num_shifts; % minimum workers per shift * number of shifts
-par int: min_shift_workers = 2; % minimum workers per shift
-par int: max_shift_workers = 4; % maximum workers per shift
-par int: min_shifts = 1; % the minimum shifts each worker can have
+par int: num_shifts; % number of shifts in a day
+par int: min_workers; % minimum workers per shift * number of shifts
+par int: min_shift_workers; % minimum workers per shift
+par int: max_shift_workers; % maximum workers per shift
+par int: min_shifts; % the minimum shifts each worker can have
 
 type emp_data = par record(par EMPLOYEES: name, par int: max_shifts);
 array[EMPLOYEES] of emp_data: emp_max_shifts;

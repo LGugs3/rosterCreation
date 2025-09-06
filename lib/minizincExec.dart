@@ -1,16 +1,21 @@
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:csv/csv.dart';
 
-const String outputCSVFile = "minizinc/output.csv";
-const String minizincDebugFile = "minizinc/debug.txt";
+const String outputCSVFile = "./minizinc/output.csv";
+const String minizincDebugFile = "./minizinc/debug.txt";
+
+Future<List<List<dynamic>>> returnMinizincOutput() async {
+  await tryRunMinizinc();
+
+  return await loadCsv();
+}
 
 Future<void> tryRunMinizinc() async {
   try{
-    runMinizinc();
+    await runMinizinc();
   } on FileSystemException catch(e){
     if (kDebugMode) {
       print(e.message);
@@ -18,39 +23,37 @@ Future<void> tryRunMinizinc() async {
   }
 }
 
-void runMinizinc() async {
-  late String mzFile;
+Future<void> runMinizinc() async {
+  String mzFile;
   if (Platform.isWindows){
-    mzFile = "minizincDistros/windows/minizinc";
+    mzFile = "./minizincDistros/windows/minizinc";
   } else if (Platform.isMacOS){
-    mzFile = "minizincDistros/macos/Contents/Resources/minizinc"; //TODO:: change to update actual path
+    mzFile = "./minizincDistros/macos/Contents/Resources/minizinc"; //TODO:: change to update actual path
   } else{
     throw PlatformException(code: "UNSUPPORTED_PLATFORM", message: "Unsupported platform: ${Platform.operatingSystem}");
   }
 
-  //solver commands
-  ProcessResult counterProc = await Process.run(mzFile, ["minizinc/config.mpc", "minizinc/schedule.mzn", "-d", "./minizinc/counter.dzn"]);
-  ProcessResult driverProc = await Process.run(mzFile, ["minizinc/config.mpc", "minizinc/schedule.mzn", "-d", "./minizinc/driver.dzn"]);
+  //solver processes
+  ProcessResult counterProc = await Process.run(mzFile, ["./minizinc/config.mpc", "./minizinc/schedule.mzn", "-d", "./minizinc/counter.dzn"]);
+  ProcessResult driverProc = await Process.run(mzFile, ["./minizinc/config.mpc", "./minizinc/schedule.mzn", "-d", "./minizinc/driver.dzn"]);
 
   File outFile = File(outputCSVFile);
   File bugFile = File(minizincDebugFile);
 
+
   //remove old files
-  if (await bugFile.exists()) {
-    await bugFile.delete();
-  }
-  if (await outFile.exists()) {
-    await outFile.delete();
-  }
-  print("files deleted");
+  // if (await bugFile.exists()) {
+  //   await bugFile.delete();
+  // }
+  // if (await outFile.exists()) {
+  //   await outFile.delete();
+  // }
 
 
   IOSink outSink = outFile.openWrite();
   IOSink errSink = bugFile.openWrite();
   outSink.writeAll([counterProc.stdout, "\n", driverProc.stdout]);
   errSink.writeAll([counterProc.stderr, "\n", driverProc.stderr]);
-
-  print("new files generated");
 
   //flush and close sinks
   await outSink.flush();
@@ -61,9 +64,8 @@ void runMinizinc() async {
 }
 
 FutureBuilder<List<List<dynamic>>> buildMZOutput() {
-  print("new table generated");
   return FutureBuilder<List<List<dynamic>>>(
-    future: loadCsv(),
+    future: returnMinizincOutput(),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) { //still waiting
         return Center(child: CircularProgressIndicator());
@@ -71,13 +73,14 @@ FutureBuilder<List<List<dynamic>>> buildMZOutput() {
         return Center(child: Text("Error: ${snapshot.error}"));
       } else if (!snapshot.hasData || snapshot.data!.isEmpty) { //data block is empty
         return Center(child: const Text("no data found."));
+      } else if (snapshot.connectionState == ConnectionState.done) { //successful completion
+        return showMZOutput(snapshot.requireData);
       } else {
-        return showMZOutput(snapshot.data!);
+        throw Exception("future builder failed to complete.");
       }
     },
   );
 }
-
 
 GridView showMZOutput(List<List<dynamic>> csvTable) {
   List<dynamic> header = csvTable[0];
@@ -104,9 +107,7 @@ GridView showMZOutput(List<List<dynamic>> csvTable) {
 }
 
 Future<List<List<dynamic>>> loadCsv() async {
-  print("csv file read");
-  final String rawCsv = await rootBundle.loadString(outputCSVFile);
-
+  String rawCsv = await rootBundle.loadString(outputCSVFile);
   List<List<dynamic>> csvTable = CsvToListConverter().convert(rawCsv, fieldDelimiter: '|');
   return csvTable;
 }
